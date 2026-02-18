@@ -1,0 +1,652 @@
+<!doctype html>
+
+
+    
+    
+    JADWAL SHOLAT & IMSAKIYAH
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&amp;family=Amiri:wght@400;700&amp;display=swap" rel="stylesheet" />
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 1.25rem;
+        }
+        .prayer-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .prayer-card.active {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1);
+            color: white !important;
+        }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #059669;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin-loader 1s linear infinite;
+        }
+        @keyframes spin-loader { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .custom-scroll::-webkit-scrollbar { height: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        #niat-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        #niat-modal.active { display: flex; }
+        
+        .modal-container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-radius: 2rem;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform: scale(0.95);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        #niat-modal.active .modal-container {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .arabic-text { 
+            font-family: 'Amiri', serif; 
+            font-size: 2rem; 
+            line-height: 3.5rem; 
+            text-align: right; 
+            direction: rtl;
+            color: #1e293b;
+        }
+
+        .carousel-container {
+            display: flex;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .carousel-slide {
+            width: 100%;
+            flex-shrink: 0;
+            padding: 2rem;
+        }
+
+        .dot-active {
+            width: 1.5rem !important;
+            background-color: currentColor !important;
+        }
+
+        .ripple-container {
+            position: relative;
+            overflow: hidden;
+        }
+        .ripple {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple-animation 0.6s linear;
+            pointer-events: none;
+        }
+        @keyframes ripple-animation {
+            to { transform: scale(4); opacity: 0; }
+        }
+
+        .spinning-pin {
+            display: inline-block;
+            animation: spin-y 3s linear infinite;
+        }
+        @keyframes spin-y {
+            0% { transform: rotateY(0deg); }
+            100% { transform: rotateY(360deg); }
+        }
+
+        .urgent-zone {
+            position: relative;
+            border: 1px solid #fecaca;
+            background: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .urgent-zone:hover {
+            border-color: #ef4444;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+        }
+        
+        #city-selector {
+            appearance: none;
+            background: transparent;
+            border: none;
+            padding: 0 24px 0 0;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            width: 100%;
+            color: #ef4444;
+            font-size: 0.875rem;
+            z-index: 2;
+        }
+        #city-selector:focus { outline: none; }
+        
+        .select-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+     
+
+        #color-settings-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+        }
+        #color-settings-panel.open {
+            max-height: 500px;
+            opacity: 1;
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+        }
+    </style>
+
+
+
+    <!-- Modal Niat -->
+    <div id="niat-modal" onclick="closeModal()">
+        <div class="modal-container" onclick="event.stopPropagation()">
+            <div id="modal-header-bg" class="relative p-6 text-white overflow-hidden transition-colors duration-500">
+                <div class="relative z-10 flex justify-between items-center">
+                    <div>
+                        <p class="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80 mb-1">Informasi Ibadah</p>
+                        <h3 id="modal-title" class="font-extrabold text-xl tracking-tight">Niat & Doa</h3>
+                    </div>
+                    <button onclick="closeModal()" class="bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl p-2 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewbox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></path></svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="modal-body-container" class="bg-white">
+                <div id="carousel-wrapper" class="carousel-container"></div>
+            </div>
+
+            <div class="p-6 bg-slate-50 border-t border-slate-100">
+                <div id="carousel-nav" class="flex flex-col items-center gap-4">
+                    <div id="carousel-dots" class="flex justify-center gap-1.5 hidden"></div>
+                    <div class="w-full flex justify-between items-center">
+                        <p class="text-[10px] text-slate-400 font-medium italic">Sumber: Kemenag RI & NU Online</p>
+                        <div id="swipe-hint" class="flex items-center gap-1.5 text-[10px] text-emerald-600 font-bold hidden animate-pulse uppercase tracking-widest">
+                            Geser <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewbox="0 0 16 16"><path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z"/></path></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+            <div class="w-full md:w-auto flex flex-col items-center md:items-start text-center md:text-left">
+                <p class="text-sm font-bold tracking-[0.2em] text-emerald-600 uppercase mb-0">Jadwal</p>
+                <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight uppercase">Sholat & Imsakiyah</h1>
+                
+                <!-- Papan Zona Rujukan sebagai Toggle Dropdown -->
+                <div class="mt-4 w-full md:w-[280px] urgent-zone rounded-2xl px-4 py-3 shadow-sm group">
+                    <div class="flex items-center justify-center gap-2 mb-1 pointer-events-none">
+                        <div class="spinning-pin text-red-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewbox="0 0 16 16">
+                                <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+                            </path></svg>
+                        </div>
+                        <span class="text-[10px] font-bold tracking-widest text-red-600 opacity-80 uppercase">Pilih Lokasi Rujukan</span>
+                    </div>
+                    
+                    <div class="select-wrapper">
+                        <select id="city-selector">
+                            <option value="-7.3912,109.3638" />📍 Purbalingga (Default)
+                            <option value="auto" />✨ Deteksi Lokasi Otomatis
+                            
+                            <optgroup label="DKI JAKARTA">
+                                <option value="-6.2088,106.8456" />Jakarta Pusat
+                            </optgroup>
+
+                            <optgroup label="BANTEN">
+                                <option value="-6.1200,106.1503" />Serang
+                                <option value="-6.0122,106.0515" />Cilegon
+                                <option value="-6.1783,106.6319" />Tangerang
+                                <option value="-6.3644,106.1065" />Pandeglang
+                                <option value="-6.3111,106.2430" />Lebak (Rangkasbitung)
+                            </optgroup>
+
+                            <optgroup label="JAWA BARAT">
+                                <option value="-6.9175,107.6191" />Bandung
+                                <option value="-6.2383,106.9756" />Bekasi
+                                <option value="-6.5971,106.8060" />Bogor
+                                <option value="-6.4025,106.7942" />Depok
+                                <option value="-6.7320,108.5523" />Cirebon
+                                <option value="-7.3274,108.2207" />Tasikmalaya
+                                <option value="-6.3128,107.2903" />Karawang
+                                <option value="-6.8175,107.1427" />Cianjur
+                                <option value="-6.9277,106.9299" />Sukabumi
+                                <option value="-7.2279,107.9087" />Garut
+                            </optgroup>
+
+                            <optgroup label="JAWA TENGAH">
+                                <option value="-6.9667,110.4167" />Semarang
+                                <option value="-7.5708,110.8214" />Surakarta (Solo)
+                                <option value="-6.8676,109.1371" />Tegal
+                                <option value="-6.8048,110.8416" />Kudus
+                                <option value="-6.8898,109.6746" />Pekalongan
+                                <option value="-7.4706,110.2178" />Magelang
+                                <option value="-7.4244,109.2302" />Banyumas (Purwokerto)
+                                <option value="-7.7011,109.0236" />Cilacap
+                                <option value="-6.7487,110.6755" />Jepara
+                                <option value="-7.3312,110.5053" />Salatiga
+                            </optgroup>
+
+                            <optgroup label="D.I. YOGYAKARTA">
+                                <option value="-7.7956,110.3695" />Yogyakarta
+                                <option value="-7.8849,110.3342" />Bantul
+                                <option value="-7.7163,110.3556" />Sleman
+                                <option value="-7.9642,110.6019" />Gunung Kidul
+                            </optgroup>
+
+                            <optgroup label="JAWA TIMUR">
+                                <option value="-7.2575,112.7521" />Surabaya
+                                <option value="-7.9839,112.6214" />Malang
+                                <option value="-7.4478,112.7183" />Sidoarjo
+                                <option value="-7.8165,112.0111" />Kediri
+                                <option value="-7.5147,111.5295" />Madiun
+                                <option value="-7.1510,111.8813" />Bojonegoro
+                                <option value="-7.7569,113.2161" />Probolinggo
+                                <option value="-8.0983,113.7224" />Jember
+                                <option value="-8.2192,114.3691" />Banyuwangi
+                                <option value="-7.1147,113.4831" />Pamekasan (Madura)
+                                <option value="-7.0051,112.4401" />Lamongan
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full md:w-auto flex flex-col items-center md:items-end">
+                <div class="glass-card px-8 py-4 shadow-sm border-emerald-100 mb-2 text-center md:text-right min-w-[280px]">
+                    <div id="real-clock" class="text-4xl font-mono font-black text-emerald-700 leading-none mb-2">00:00:00</div>
+                    <div id="date-container" class="space-y-0.5">
+                        <div id="current-date-masehi" class="text-sm font-bold text-slate-600">---</div>
+                        <div id="current-date-hijri" class="text-xs font-medium text-emerald-600 bg-emerald-50 inline-block px-2 py-0.5 rounded-full">---</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Banner Countdown -->
+        <div id="countdown-banner" class="hidden ripple-container transform transition-all duration-500 mb-8 cursor-pointer select-none group rounded-2xl">
+            <div id="banner-bg" class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4 group-hover:shadow-emerald-500/20">
+                <div class="flex items-center gap-4 relative z-10 pointer-events-none">
+                    <div class="bg-white/20 p-3 rounded-2xl backdrop-blur-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewbox="0 0 16 16">
+                            <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+                            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+                        </path></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-emerald-100 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Ketuk 2x Info Ibadah</p>
+                        <h2 class="text-2xl font-black tracking-tight" id="next-prayer-title">Memuat...</h2>
+                    </div>
+                </div>
+                <div class="text-5xl font-mono font-black tracking-tighter relative z-10 pointer-events-none" id="countdown-timer">00:00:00</div>
+            </div>
+        </div>
+
+        <main>
+            <div id="loading-state" class="flex flex-col items-center justify-center py-20">
+                <div class="loader mb-4"></div>
+                <p class="text-slate-500 animate-pulse text-sm">Menghitung koordinat langit...</p>
+            </div>
+            
+            <div id="prayer-container" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 hidden"></div>
+
+            <!-- Panel Warna (Hanya Muncul saat Klik Ikon di Kartu Isya) -->
+            <div id="color-settings-panel" class="glass-card border-emerald-100">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">Kustomisasi Warna Penanda</h3>
+                    <button onclick="toggleColorSettings()" class="text-slate-400 hover:text-red-500 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewbox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></path></svg>
+                    </button>
+                </div>
+                <div class="flex gap-6 overflow-x-auto pb-4 custom-scroll">
+                    <div class="flex flex-col items-center gap-2 min-w-[70px]"><span class="text-[10px] font-bold">Imsak</span><input type="color" data-prayer="Imsak" value="#278C53" class="color-picker w-10 h-10 cursor-pointer bg-transparent border-none" /></div>
+                    <div class="flex flex-col items-center gap-2 min-w-[70px]"><span class="text-[10px] font-bold">Subuh</span><input type="color" data-prayer="Fajr" value="#32967F" class="color-picker w-10 h-10 cursor-pointer bg-transparent border-none" /></div>
+                    <div class="flex flex-col items-center gap-2 min-w-[70px]"><span class="text-[10px] font-bold">Terbit</span><input type="color" data-prayer="Sunrise" value="#32967F" class="color-picker w-10 h-10 cursor-pointer bg-transparent border-none" /></div>
+                    <div class="flex flex-col items-center gap-2 min-w-[70px]"><span class="text-[10px] font-bold">Zuhur</span><input type="color" data-prayer="Dhuhr" value="#32967F" class="color-picker w-10 h-10 cursor-pointer bg-transparent border-none" /></div>
+                    <div class="flex flex-col items-center gap-2 min-w-[70px]"><span class="text-[10px] font-bold">Asar</span><input type="color" data-prayer="Asr" value="#32967F" class="color-picker w-10 h-10 cursor-pointer bg-transparent border-none" /></div>
+                    <div class="flex flex-col items-center gap-2 min-w-[70px]"><span class="text-[10px] font-bold">Magrib</span><input type="color" data-prayer="Maghrib" value="#FF318E" class="color-picker w-10 h-10 cursor-pointer bg-transparent border-none" /></div>
+                    <div class="flex flex-col items-center gap-2 min-w-[70px]"><span class="text-[10px] font-bold">Isya</span><input type="color" data-prayer="Isha" value="#32967F" class="color-picker w-10 h-10 cursor-pointer bg-transparent border-none" /></div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="mt-16 text-center">
+            <p class="text-slate-400 text-[10px] uppercase tracking-widest mb-1">Aplikasi Jadwal Salat & Imsakiyah &copy; 2026</p>
+            <p class="text-slate-300 text-[9px]">Sumber Data: Aladhan API • Metode: Kemenag RI</p>
+        </footer>
+    </div>
+
+    <script>
+        const niatData = {
+            Fajr: { title: "Niat Sholat Subuh", arabic: "اُصَلّى فَرْضَ الصُّبْحِ رَكْعَتَيْنِ مُسْتَقْبِلَ الْقِبْلَةِ اَدَاءً للهِ تَعَالَى", latin: "Ushalli fardhash-shubhi rak'ataini mustaqbilal qiblati ada'an lillahi ta'ala.", trans: "Aku niat melakukan sholat fardu subuh dua rakaat sambil menghadap kiblat, saat ini, karena Allah ta'ala." },
+            Dhuhr: { title: "Niat Sholat Dzuhur", arabic: "اُصَلّى فَرْضَ الظُّهْرِ اَرْبَعَ رَكَعَاتٍ مُسْتَقْبِلَ الْقِبْلَةِ اَدَاءً للهِ تَعَالَى", latin: "Ushalli fardhadh-dhuhri arba'a raka'atin mustaqbilal qiblati ada'an lillahi ta'ala.", trans: "Aku niat melakukan sholat fardu dzuhur empat rakaat sambil menghadap kiblat, saat ini, karena Allah ta'ala." },
+            Jumat: { title: "Niat Sholat Jumat", arabic: "اُصَلِّي فَرْضَ الْجُمُعَةِ رَكْعَتَيْنِ مُسْتَقْبِلَ الْقِبْلَةِ اَدَاءً مَأْمُومًا لِلهِ تَعَالَى", latin: "Ushalli fardhal jumu'ati rak'ataini mustaqbilal qiblati ada'an ma'muman lillahi ta'ala.", trans: "Aku niat melakukan sholat fardu Jumat dua rakaat sambil menghadap kiblat, saat ini, sebagai makmum, karena Allah ta'ala." },
+            Asr: { title: "Niat Sholat Asar", arabic: "اُصَلّى fَرْضَ الْعَصْرِ اَرْبَعَ رَكَعَاتٍ مُسْتَقْبِلَ الْقِبْلَةِ اَدَاءً للهِ تَعَالَى", latin: "Ushalli fardhal-'ashri arba'a raka'atin mustaqbilal qiblati ada'an lillahi ta'ala.", trans: "Aku niat melakukan sholat fardu asar empat rakaat sambil menghadap kiblat, saat ini, karena Allah ta'ala." },
+            Maghrib: { 
+                title: "Niat Sholat Maghrib", 
+                arabic: "اُصَلّى فَرْضَ الْمَغْرِبِ ثَلاَثَ رَكَعَاتٍ مُسْتَقْبِلَ الْقِبْلَةِ اَدَاءً للهِ تَعَالَى", 
+                latin: "Ushalli fardhal-maghribi tsalatsa raka'atin mustaqbilal qiblati ada'an lillahi ta'ala.", 
+                trans: "Aku niat melakukan sholat fardu maghrib tiga rakaat sambil menghadap kiblat, saat ini, karena Allah ta'ala.",
+                bukaPuasa: {
+                    title: "Doa Buka Puasa",
+                    arabic: "ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ، وَثَبَتَ الأَجْرُ إِنْ شَاءَ اللَّهُ",
+                    latin: "Dzahabaz zhama'u wabtallatil 'uruqu wa tsabatal ajru in sya' Allah.",
+                    trans: "Telah hilang rasa haus, telah basah urat-urat, dan telah tetap pahala, insya Allah. (HR. Abu Dawud)"
+                }
+            },
+            Isha: { 
+                title: "Niat Sholat Isya", 
+                arabic: "اُصَلّى fَرْضَ الْعِشَاءِ اَرْبَعَ رَكَعَاتٍ مُسْتَقْبِلَ الْقِبْلَةِ اَدَاءً للهِ تَعَالَى", 
+                latin: "Ushalli fardhal-'isya'i arba'a raka'atin mustaqbilal qiblati ada'an lillahi ta'ala.", 
+                trans: "Aku niat melakukan sholat fardu isya empat rakaat sambil menghadap kiblat, saat ini, karena Allah ta'ala.",
+                ramadan: [
+                    { title: "Niat Sholat Isya", arabic: "اُصَلّى فَرْضَ الْعِشَاءِ اَرْبَعَ رَكَعَاتٍ مُسْتَقْبِلَ الْقِبْلَةِ اَدَاءً للهِ تَعَالَى", latin: "Ushalli fardhal-'isya'i arba'a raka'atin mustaqbilal qiblati ada'an lillahi ta'ala.", trans: "Aku niat melakukan sholat fardu isya empat rakaat sambil menghadap kiblat, saat ini, karena Allah ta'ala." },
+                    { title: "Niat Sholat Tarawih", arabic: "اُصَلِّى سُنَّةَ التَّرَاوِيْحِ رَكْعَتَيْنِ مُسْتَقْبِلَ الْقِبْلَةِ لِلَّهِ تَعَالَى", latin: "Ushalli sunnatat-tarawiihi rak'ataini mustaqbilal qiblati lillahi ta'ala.", trans: "Aku niat sholat sunnah tarawih dua rakaat dengan menghadap kiblat karena Allah Ta'ala." },
+                    { title: "Niat Sholat Witir", arabic: "اُصَلِّى سُنَّةَ الْوِتْرِ رَكْعَةً مُسْتَقْبِلَ الْقِبْلَةِ لِلَّهِ تَعَالَى", latin: "Ushalli sunnatal witri rak'atan mustaqbilal qiblati lillahi ta'ala.", trans: "Aku niat sholat sunnah witir satu rakaat dengan menghadap kiblat karena Allah Ta'ala." }
+                ]
+            },
+            Sunrise: { title: "Niat Sholat Dhuha", arabic: "اُصَلِّى سُنَّةَ الضُّحَى رَكْعَتَيْنِ لِلَّهِ تَعَالَى", latin: "Ushalli sunnatadh-dhuha rak'ataini lillahi ta'ala.", trans: "Aku niat sholat sunnah dhuha dua rakaat karena Allah ta'ala." },
+            Imsak: { 
+                title: "Niat Puasa", 
+                ramadan: { arabic: "نَوَيْتُ صَوْمَ غَدٍ عَنْ أَدَاءِ فَرْضِ شَهْرِ رَمَضَانَ هَذِهِ السَّنَةِ لِلَّهِ تَعَالَى", latin: "Nawaitu shauma ghadin 'an ada'i fardhi syahri Ramadhana hadzihis sanati lillahi ta'ala.", trans: "Aku niat berpuasa esok hari untuk menunaikan kewajiban di bulan Ramadhan tahun ini, karena Allah ta'ala." }, 
+                senin: { arabic: "نَوَيْتُ صَوْمَ يَوْمِ الِاثْنَيْنِ لِلَّهِ تَعَالَى", latin: "Nawaitu shauma yaumil itsnaini lillahi ta'ala.", trans: "Aku niat berpuasa hari Senin karena Allah ta'ala." }, 
+                kamis: { arabic: "نَوَيْتُ صَوْمَ يَوْمِ الْخَمِيْسِ لِلَّهِ تَعَالَى", latin: "Nawaitu shauma yaumil khamisi lillahi ta'ala.", trans: "Aku niat berpuasa hari Kamis karena Allah ta'ala." }, 
+                umum: { arabic: "نَوَيْتُ الصَّوْمَ لِلَّهِ تَعَالَى", latin: "Nawaitu ash-shauma lillahi ta'ala.", trans: "Aku niat berpuasa sunnah karena Allah ta'ala." },
+                tasyrik: { title: "Perbanyak Syukur", arabic: "سُبْحَانَ اللهِ وَالْحَمْدُ لِلَّهِ وَلَا اِلَهَ اِلَّا اللهُ وَاللهُ اَكْبَرُ", latin: "Subhanallahi walhamdulillah wala ilaha illallah wallahu akbar", trans: "Maha Suci Allah, segala puji bagi Allah, tidak ada Tuhan selain Allah, dan Allah adalah Maha Besar." }
+            },
+            EidFitr: { title: "Niat Sholat Idul Fitri", arabic: "أُصَلِّي سُنَّةً لِعِيدِ الْفِطْرِ رَكْعَتَيْنِ مُسْتَقْبِلَ الْقِبْلَةِ أَدَاءً لِلَّهِ تَعَالَى", latin: "Ushalli sunnatan li 'idil fithri rak'ataini mustaqbilal qiblati ada'an lillahi ta'ala.", trans: "Aku niat sholat sunnah Idul Fitri dua rakaat menghadap kiblat karena Allah ta'ala." },
+            EidAdha: { title: "Niat Sholat Idul Adha", arabic: "أُصَلِّي سُنَّةً لِعِيدِ الْأَضْحَى رَكْعَتَيْنِ مُسْتَقْبِلَ الْقِبْلَةِ أَدَاءً لِلَّهِ تَعَالَى", latin: "Ushalli sunnatan li 'idil adha rak'ataini mustaqbilal qiblati ada'an lillahi ta'ala.", trans: "Aku niat sholat sunnah Idul Adha dua rakaat menghadap kiblat karena Allah ta'ala." }
+        };
+
+        const prayerConfig = { Imsak: "Imsak", Fajr: "Subuh", Sunrise: "Terbit", Dhuhr: "Zuhur", Asr: "Asar", Maghrib: "Magrib", Isha: "Isya" };
+        let userColors = { Imsak: "#278C53", Fajr: "#32967F", Sunrise: "#32967F", Dhuhr: "#32967F", Asr: "#32967F", Maghrib: "#FF318E", Isha: "#32967F" };
+        let currentTimings = null, hijriData = null, nextPrayerKey = null, currentCarouselIndex = 0;
+
+        const clockEl = document.getElementById('real-clock');
+        const masehiEl = document.getElementById('current-date-masehi');
+        const hijriEl = document.getElementById('current-date-hijri');
+        const banner = document.getElementById('countdown-banner');
+
+        function isFriday() { return new Date().getDay() === 5; }
+        function getEffectiveColor(key) { return (key === 'Dhuhr' && isFriday()) ? "#EB9A2A" : userColors[key]; }
+
+        function toggleColorSettings() {
+            const panel = document.getElementById('color-settings-panel');
+            panel.classList.toggle('open');
+            if(panel.classList.contains('open')) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function createRipple(event) {
+            const container = event.currentTarget;
+            const circle = document.createElement("span");
+            const diameter = Math.max(container.clientWidth, container.clientHeight);
+            const radius = diameter / 2;
+            circle.style.width = circle.style.height = `${diameter}px`;
+            circle.style.left = `${(event.clientX || event.touches[0].clientX) - container.getBoundingClientRect().left - radius}px`;
+            circle.style.top = `${(event.clientY || event.touches[0].clientY) - container.getBoundingClientRect().top - radius}px`;
+            circle.classList.add("ripple");
+            const ripple = container.getElementsByClassName("ripple")[0];
+            if (ripple) ripple.remove();
+            container.appendChild(circle);
+        }
+
+        function updateTime() {
+            const now = new Date();
+            clockEl.innerText = now.toLocaleTimeString('id-ID', { hour12: false });
+            masehiEl.innerText = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            if (currentTimings) processCalculations(now);
+        }
+
+        async function fetchJadwal(lat, lng, cityName) {
+            try {
+                document.getElementById('loading-state').classList.remove('hidden');
+                document.getElementById('prayer-container').classList.add('hidden');
+                const res = await fetch(`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=20&adjustment=1`);
+                const data = await res.json();
+                currentTimings = data.data.timings;
+                hijriData = data.data.date.hijri;
+                hijriEl.innerText = `${hijriData.day} ${hijriData.month.en} ${hijriData.year} H`;
+                renderCards(currentTimings);
+                document.getElementById('loading-state').classList.add('hidden');
+                document.getElementById('prayer-container').classList.remove('hidden');
+                banner.classList.remove('hidden');
+            } catch (err) { console.error(err); }
+        }
+
+        function initLocation() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => fetchJadwal(pos.coords.latitude, pos.coords.longitude, "GPS"),
+                    () => fetchJadwal("-7.3912", "109.3638", "Purbalingga"),
+                    { timeout: 5000 }
+                );
+            } else { fetchJadwal("-7.3912", "109.3638", "Purbalingga"); }
+        }
+
+        function renderCards(timings) {
+            const container = document.getElementById('prayer-container');
+            container.innerHTML = '';
+            Object.entries(prayerConfig).forEach(([key, label]) => {
+                const isIsha = key === 'Isha';
+                const color = getEffectiveColor(key);
+                let parent = container;
+                if (isIsha) {
+                    const group = document.createElement('div');
+                    group.className = "isya-group-container col-span-2 md:col-span-1 lg:col-span-1 flex gap-2 items-stretch h-full";
+                    container.appendChild(group);
+                    parent = group;
+                }
+                const div = document.createElement('div');
+                div.id = `card-${key}`;
+                div.className = "glass-card p-6 flex flex-col items-center justify-center text-center prayer-card shadow-sm border-l-4 w-full h-full";
+                div.style.borderLeftColor = color;
+                div.innerHTML = `<p class="text-[10px] font-bold uppercase text-slate-400 tracking-tighter mb-1">${label}</p><p class="text-2xl font-black text-slate-800">${timings[key]}</p>`;
+                parent.appendChild(div);
+                
+                if (isIsha) {
+                    const btn = document.createElement('button');
+                    btn.className = "bg-white border border-slate-200 rounded-2xl px-3 hover:bg-slate-50 shadow-sm transition-all text-slate-500 flex flex-col items-center justify-center gap-1 group min-w-[50px]";
+                    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="group-hover:rotate-45 transition-transform duration-500" viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.185 1.185l-.16.291a1.873 1.873 0 0 0 1.115 2.693l.319.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.185l-.291-.16a1.873 1.873 0 0 0-2.693 1.115l-.094.319c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.693-1.115l-.291.16c-.764.415-1.6-.42-1.185-1.185l.16-.291a1.873 1.873 0 0 0-1.115-2.693l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094a1.873 1.873 0 0 0 1.115-2.693l-.16-.291c-.415-.764.42-1.6 1.185-1.185l.291.16a1.873 1.873 0 0 0 2.693-1.115l.094-.319z"/></svg><span class="text-[8px] font-black uppercase tracking-widest text-emerald-600">Atur</span>`;
+                    btn.onclick = toggleColorSettings;
+                    parent.appendChild(btn);
+                }
+            });
+        }
+
+        function processCalculations(now) {
+            const prayerKeys = Object.keys(prayerConfig);
+            const times = prayerKeys.map(key => {
+                const [h, m] = currentTimings[key].split(':');
+                const pDate = new Date(now); pDate.setHours(parseInt(h), parseInt(m), 0, 0);
+                return { key, time: pDate };
+            });
+            let current = null;
+            for (let i = times.length - 1; i >= 0; i--) if (times[i].time <= now) { current = times[i]; break; }
+            let next = times.find(t => t.time > now);
+            if (!next) { next = { ...times[0] }; next.time = new Date(next.time.getTime() + 24 * 60 * 60 * 1000); }
+            nextPrayerKey = next.key;
+            
+            prayerKeys.forEach(k => {
+                const card = document.getElementById(`card-${k}`);
+                if (card) {
+                    const color = getEffectiveColor(k);
+                    if (current && k === current.key) { card.classList.add('active'); card.style.backgroundColor = color; card.style.borderLeftColor = 'transparent'; }
+                    else { card.classList.remove('active'); card.style.backgroundColor = ''; card.style.borderLeftColor = color; }
+                }
+            });
+            const nextColor = getEffectiveColor(next.key);
+            document.getElementById('banner-bg').style.background = `linear-gradient(to right, ${nextColor}, ${adjustColor(nextColor, -15)})`;
+            document.getElementById('next-prayer-title').innerText = prayerConfig[next.key];
+            const diff = next.time - now;
+            const h = Math.floor(diff / 3600000), m = Math.floor((diff % 3600000) / 60000), s = Math.floor((diff % 60000) / 1000);
+            document.getElementById('countdown-timer').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        }
+
+        function adjustColor(hex, percent) {
+            let num = parseInt(hex.replace("#",""),16), amt = Math.round(2.55 * percent), R = (num >> 16) + amt, B = (num >> 8 & 0x00FF) + amt, G = (num & 0x0000FF) + amt;
+            return "#" + (0x1000000 + (R<255?R<0?0:R:255)*0x10000 + (B<255?B<0?0:B:255)*0x100 + (G<255?G<0?0:G:255)).toString(16).slice(1);
+        }
+
+        function showNiat() {
+            if (!nextPrayerKey) return;
+            const modal = document.getElementById('niat-modal');
+            const carouselWrapper = document.getElementById('carousel-wrapper');
+            const dotsContainer = document.getElementById('carousel-dots');
+            const swipeHint = document.getElementById('swipe-hint');
+            
+            const now = new Date();
+            const day = now.getDay();
+            const hDay = parseInt(hijriData.day);
+            const hMonthNum = parseInt(hijriData.month.number);
+            const hMonthName = hijriData.month.en;
+            const isRamadan = hMonthNum === 9 || hMonthName === "Ramadan";
+            const isMonday = day === 1;
+            const isThursday = day === 4;
+            const isEidFitr = hDay === 1 && (hMonthNum === 10 || hMonthName === "Shawwal");
+            const isEidAdha = hDay === 10 && (hMonthNum === 12 || hMonthName === "Dhu al-Hijjah");
+            const isTasyrik = (hDay >= 11 && hDay <= 13) && (hMonthNum === 12 || hMonthName === "Dhu al-Hijjah");
+
+            carouselWrapper.innerHTML = ""; dotsContainer.innerHTML = "";
+            dotsContainer.classList.add('hidden'); swipeHint.classList.add('hidden');
+            currentCarouselIndex = 0; carouselWrapper.style.transform = "translateX(0)";
+
+            if (nextPrayerKey === 'Maghrib' && (isRamadan || isMonday || isThursday) && !isTasyrik) {
+                const maghribBase = niatData.Maghrib;
+                const doaBuka = niatData.Maghrib.bukaPuasa;
+                carouselWrapper.style.width = "200%";
+                dotsContainer.classList.remove('hidden'); swipeHint.classList.remove('hidden');
+                addSlide(carouselWrapper, doaBuka.title, doaBuka.arabic, doaBuka.latin, doaBuka.trans);
+                addSlide(carouselWrapper, maghribBase.title, maghribBase.arabic, maghribBase.latin, maghribBase.trans);
+                addDot(dotsContainer, 0); addDot(dotsContainer, 1);
+                updateModalHeader(doaBuka.title, getEffectiveColor('Maghrib'));
+            } else if (nextPrayerKey === 'Sunrise' && (isEidFitr || isEidAdha)) {
+                carouselWrapper.style.width = "200%";
+                dotsContainer.classList.remove('hidden'); swipeHint.classList.remove('hidden');
+                const eidData = isEidFitr ? niatData.EidFitr : niatData.EidAdha;
+                const dhuhaData = niatData.Sunrise;
+                addSlide(carouselWrapper, eidData.title, eidData.arabic, eidData.latin, eidData.trans);
+                addSlide(carouselWrapper, dhuhaData.title, dhuhaData.arabic, dhuhaData.latin, dhuhaData.trans);
+                addDot(dotsContainer, 0); addDot(dotsContainer, 1);
+                updateModalHeader(eidData.title, getEffectiveColor('Sunrise'));
+            } else if (nextPrayerKey === 'Isha' && isRamadan) {
+                const ramadanPrayers = niatData.Isha.ramadan;
+                carouselWrapper.style.width = `${ramadanPrayers.length * 100}%`;
+                dotsContainer.classList.remove('hidden'); swipeHint.classList.remove('hidden');
+                ramadanPrayers.forEach((p, idx) => { addSlide(carouselWrapper, p.title, p.arabic, p.latin, p.trans); addDot(dotsContainer, idx); });
+                updateModalHeader(ramadanPrayers[0].title, getEffectiveColor('Isha'));
+            } else {
+                carouselWrapper.style.width = "100%";
+                let targetData = null;
+                if (nextPrayerKey === 'Imsak') {
+                    if (isTasyrik) targetData = niatData.Imsak.tasyrik;
+                    else {
+                        targetData = isRamadan ? { ...niatData.Imsak.ramadan } : (isMonday ? { ...niatData.Imsak.senin } : (isThursday ? { ...niatData.Imsak.kamis } : { ...niatData.Imsak.umum }));
+                        targetData.title = niatData.Imsak.title;
+                    }
+                } else if (nextPrayerKey === 'Dhuhr' && day === 5) targetData = niatData.Jumat;
+                else targetData = niatData[nextPrayerKey];
+
+                if (targetData) {
+                    addSlide(carouselWrapper, targetData.title, targetData.arabic, targetData.latin, targetData.trans);
+                    updateModalHeader(targetData.title, getEffectiveColor(nextPrayerKey));
+                }
+            }
+            modal.classList.add('active');
+            setupSwipe();
+        }
+
+        function addSlide(parent, title, ar, lat, trans) {
+            const slide = document.createElement('div'); slide.className = "carousel-slide";
+            slide.innerHTML = `<div class="space-y-8"><div class="arabic-text">${ar}</div><div class="space-y-4"><div class="text-sm italic text-emerald-700 font-bold leading-relaxed bg-emerald-50/50 p-4 rounded-2xl border-l-4 border-emerald-500">${lat}</div><div class="text-[11px] text-slate-500 leading-relaxed px-2">${trans}</div></div></div>`;
+            parent.appendChild(slide);
+        }
+
+        function addDot(parent, index) {
+            const dot = document.createElement('div');
+            dot.className = `h-1.5 w-1.5 rounded-full transition-all duration-300 ${index === 0 ? 'dot-active' : 'bg-slate-200'}`;
+            dot.style.color = getEffectiveColor(nextPrayerKey); parent.appendChild(dot);
+        }
+
+        function updateModalHeader(title, color) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-header-bg').style.backgroundColor = color;
+        }
+
+        function setupSwipe() {
+            const wrapper = document.getElementById('carousel-wrapper');
+            let startX = 0, currentX = 0, threshold = 50;
+            wrapper.onmousedown = (e) => start(e.clientX);
+            wrapper.ontouchstart = (e) => start(e.touches[0].clientX);
+            function start(x) { startX = x; document.onmousemove = (e) => currentX = e.clientX; document.ontouchmove = (e) => currentX = e.touches[0].clientX; document.onmouseup = document.ontouchend = end; }
+            function end() {
+                const diff = startX - currentX; const totalSlides = wrapper.children.length;
+                if (Math.abs(diff) > threshold && totalSlides > 1) {
+                    if (diff > 0 && currentCarouselIndex < totalSlides - 1) currentCarouselIndex++;
+                    else if (diff < 0 && currentCarouselIndex > 0) currentCarouselIndex--;
+                    updateCarousel();
+                }
+                document.onmousemove = document.onmouseup = document.ontouchmove = document.ontouchend = null;
+            }
+        }
+
+        function updateCarousel() {
+            const wrapper = document.getElementById('carousel-wrapper');
+            const dots = document.getElementById('carousel-dots').children;
+            wrapper.style.transform = `translateX(-${currentCarouselIndex * 100}%)`;
+            for (let i = 0; i < dots.length; i++) dots[i].className = `h-1.5 w-1.5 rounded-full transition-all duration-300 ${i === currentCarouselIndex ? 'dot-active' : 'bg-slate-200'}`;
+        }
+
+        function closeModal() { document.getElementById('niat-modal').classList.remove('active'); }
+        banner.addEventListener('mousedown', createRipple);
+        banner.addEventListener('touchstart', (e) => { createRipple(e); });
+        banner.addEventListener('dblclick', showNiat);
+        
+        document.getElementById('city-selector').addEventListener('change', (e) => {
+            if (e.target.value === "auto") initLocation();
+            else { const [lat, lng] = e.target.value.split(','); fetchJadwal(lat, lng, e.target.options[e.target.selectedIndex].text); }
+        });
+        document.addEventListener('input', (e) => {
+            if (e.target.classList.contains('color-picker')) { userColors[e.target.dataset.prayer] = e.target.value; if (currentTimings) renderCards(currentTimings); }
+        });
+        setInterval(updateTime, 1000);
+        window.onload = initLocation;
+    </script>
+
+</!doctype>
