@@ -1,5 +1,5 @@
-## Hi there 👋
-
+## Hai Selamat Datang  👋
+😎 Siapapun kamu dan apapun aktivitasmu, semoga hari ini menyenangkan. 
 <!--
 **Djenggot123/Djenggot123** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 
